@@ -31,31 +31,20 @@ int main(int argc, char* argv[]) {
     }
 
     // Read input from user, send over serial, and receive response
-    std::string command;
+    std::string command = "set MOT_l_speed_pwm 255\n";
     while (true) {
-        std::cout << "Enter command to send (or type 'exit' to quit): ";
-        std::getline(std::cin, command);
-
-        if (command == "exit") break;
-
-        // Ensure the command is correctly formatted
-        command += "\n";  // Matches `picocom`'s default newline conversion
-
         try {
             // Send command
-            serialPort.FlushIOBuffers();
+            serialPort.FlushInputBuffer();
             serialPort.Write(command);
+            //serialPort.FlushOutputBuffer();
             serialPort.DrainWriteBuffer();  // Ensure data is fully sent
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));  // Give time for transmission
-
             std::cout << "Command sent: " << command << std::endl;
 
             // Wait for response from the device
             std::string response;
-            char byte;
-            while (serialPort.IsDataAvailable()) {
-                serialPort.ReadByte(byte, 10);
-                response += byte;
+            if (serialPort.IsDataAvailable()) {
+                serialPort.Read(response, 1000, 200);
             }
 
             // Display response if available
