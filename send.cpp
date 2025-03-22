@@ -4,6 +4,24 @@
 #include <thread>
 #include <chrono>
 
+void readThread(LibSerial::SerialPort &serialPort) {
+    std::string response;
+
+    while (true) {
+        try {
+            while (serialPort.IsDataAvailable()) {
+                serialPort.ReadLine(response, '\n');
+                if (!response.empty()) {
+                    std::cout << response << std::endl;
+                }            
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Error in read thread: " << e.what() << std::endl;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+}
+
 int main(int argc, char* argv[]) {
     // Check if the user provided a serial port as an argument
     if (argc < 2) {
@@ -30,39 +48,28 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Read input from user, send over serial, and receive response
+    // Start the reading thread
+    std::thread reader(readThread, std::ref(serialPort));
+
+    // Main thread for sending commands
     std::string command = "set MOT_l_speed_pwm 255\n";
     while (true) {
         try {
-            // Send command
-            serialPort.FlushInputBuffer();
             serialPort.Write(command);
-            //serialPort.FlushOutputBuffer();
             serialPort.DrainWriteBuffer();  // Ensure data is fully sent
-            std::cout << "Command sent: " << command << std::endl;
-
-            // Wait for response from the device
-            std::string response;
-            if (serialPort.IsDataAvailable()) {
-                serialPort.Read(response, 1000, 200);
-            }
-
-            // Display response if available
-            if (!response.empty()) {
-                std::cout << "Device response: " << response << std::endl;
-            } else {
-                std::cout << "No response received.\n";
-            }
-
+            std::cout << "Command sent: " << command;
         } catch (const std::exception& e) {
             std::cerr << "Error communicating with device: " << e.what() << std::endl;
         }
+        // Send command at regular intervals
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    // Close the serial port
+    // Although unreachable in this infinite loop,
+    // proper thread joining and port closing should be done if the loop ever ends.
+    reader.join();
     serialPort.Close();
     std::cout << "Serial port closed.\n";
 
     return 0;
 }
-
