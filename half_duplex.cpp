@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
         serialPort.FlushIOBuffers();
         serialPort.Write(setCommand);
         serialPort.DrainWriteBuffer();
-        // serialPort.ReadLine(response, '\n', 100);
+        serialPort.ReadLine(response, '\n', 100);
 
         end = std::chrono::steady_clock::now();
         latency = end - start;
